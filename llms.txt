@@ -1,0 +1,46 @@
+# GptGate RTL
+
+> Open-source Windows companion that adds runtime Persian and Arabic RTL support to the official ChatGPT desktop app without patching its installed files.
+
+## Start here
+
+- README.md: user guide, installation, behavior, and architecture overview
+- AGENTS.md: repository-specific instructions for coding agents
+- CONTRIBUTING.md: contribution workflow and quality expectations
+- SECURITY.md: private vulnerability reporting policy
+- THIRD_PARTY_NOTICES.md: bundled third-party software and licenses
+
+## Project map
+
+- CodexRtlManager/: .NET 8 WPF application
+- CodexRtlManager/MainWindow.xaml: presentation and visual structure
+- CodexRtlManager/Services/CodexLocator.cs: ChatGPT installation discovery
+- CodexRtlManager/Services/RuntimeRtlService.cs: local DevTools connection and runtime injection
+- CodexRtlManager/Services/RuntimeRtlPayload.cs: DOM observer and RTL/LTR behavior
+- CodexRtlManager/Services/CodexManagerService.cs: application orchestration
+- CodexRtlManager.Tests/: executable test suite
+- .github/workflows/: CI and tagged release automation
+- update.json: public update manifest for the latest Windows release
+
+## Validate changes
+
+```powershell
+dotnet build .\CodexRtlManager\CodexRtlManager.csproj -c Release
+dotnet run --project .\CodexRtlManager.Tests\CodexRtlManager.Tests.csproj -c Release
+```
+
+## Important constraints
+
+- Do not patch or overwrite the installed ChatGPT or Microsoft Store package files.
+- Keep DevTools communication restricted to the local loopback interface.
+- Preserve LTR behavior for code, terminals, and editable fields.
+- Preserve Persian RTL behavior and the existing GptGate dark visual language.
+- Do not redistribute proprietary fonts; Arad is bundled under SIL OFL 1.1.
+- Never commit secrets, access tokens, generated build output, or user-specific paths.
+
+## Links
+
+- Source: https://github.com/gptgate/gptgate-rtl
+- Releases: https://github.com/gptgate/gptgate-rtl/releases
+- Website: https://gptgate.ai/
+- Telegram: https://t.me/GptGateAI
