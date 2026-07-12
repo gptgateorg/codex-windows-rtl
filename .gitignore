@@ -1,0 +1,12 @@
+bin/
+obj/
+artifacts/
+.vs/
+.vscode/
+*.user
+*.suo
+*.pdb
+*.log
+TestResults/
+RuntimeUserData/
+tmp/

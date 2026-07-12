@@ -1,0 +1,97 @@
+<Application x:Class="CodexRtlManager.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             StartupUri="MainWindow.xaml">
+    <Application.Resources>
+        <FontFamily x:Key="AppFont">pack://application:,,,/GptGateRTL;component/Resources/#Arad</FontFamily>
+        <FontFamily x:Key="AppFontExtraBold">pack://application:,,,/GptGateRTL;component/Resources/#Arad</FontFamily>
+
+        <!-- GptGate dark-theme tokens, mirrored from gptgate.ai. -->
+        <SolidColorBrush x:Key="PageBrush" Color="#050B14" />
+        <SolidColorBrush x:Key="CardBrush" Color="#0D141D" />
+        <SolidColorBrush x:Key="ElevatedBrush" Color="#17202B" />
+        <SolidColorBrush x:Key="BorderBrush" Color="#1AFFFFFF" />
+        <SolidColorBrush x:Key="BorderStrongBrush" Color="#38FFFFFF" />
+        <SolidColorBrush x:Key="TextBrush" Color="#F5F5F7" />
+        <SolidColorBrush x:Key="MutedBrush" Color="#B3F5F5F7" />
+        <SolidColorBrush x:Key="SubtleBrush" Color="#8CF5F5F7" />
+        <SolidColorBrush x:Key="AccentBrush" Color="#38DDF2" />
+        <SolidColorBrush x:Key="AccentStrongBrush" Color="#67E5F6" />
+        <SolidColorBrush x:Key="AccentSoftBrush" Color="#1F38DDF2" />
+        <SolidColorBrush x:Key="GoldBrush" Color="#FF9933" />
+        <SolidColorBrush x:Key="GoldSoftBrush" Color="#1FFF9933" />
+        <SolidColorBrush x:Key="SuccessBrush" Color="#30D158" />
+
+        <LinearGradientBrush x:Key="BrandGradient" StartPoint="0,0" EndPoint="1,1">
+            <GradientStop Color="#38DDF2" Offset="0" />
+            <GradientStop Color="#1C8FA4" Offset="1" />
+        </LinearGradientBrush>
+        <LinearGradientBrush x:Key="WordmarkGradient" StartPoint="0,0" EndPoint="1,0">
+            <GradientStop Color="#2FE19B" Offset="0" />
+            <GradientStop Color="#108EBE" Offset="1" />
+        </LinearGradientBrush>
+        <LinearGradientBrush x:Key="PersianWordmarkGradient" StartPoint="1,0" EndPoint="0,0">
+            <GradientStop Color="#2FE19B" Offset="0" />
+            <GradientStop Color="#108EBE" Offset="1" />
+        </LinearGradientBrush>
+
+        <Style x:Key="BaseButton" TargetType="Button">
+            <Setter Property="MinHeight" Value="46" />
+            <Setter Property="Padding" Value="22,11" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="BorderBrush" Value="{StaticResource BorderStrongBrush}" />
+            <Setter Property="Background" Value="{StaticResource CardBrush}" />
+            <Setter Property="Foreground" Value="{StaticResource TextBrush}" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="FontWeight" Value="Normal" />
+            <Setter Property="FontFamily" Value="{StaticResource AppFont}" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Surface" Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="12" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                              VerticalAlignment="{TemplateBinding VerticalContentAlignment}" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Surface" Property="Opacity" Value="0.86" />
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Surface" Property="Opacity" Value="0.68" />
+                            </Trigger>
+                            <Trigger Property="IsKeyboardFocused" Value="True">
+                                <Setter TargetName="Surface" Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+                                <Setter TargetName="Surface" Property="BorderThickness" Value="2" />
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="Surface" Property="Opacity" Value="0.38" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="PrimaryButton" TargetType="Button" BasedOn="{StaticResource BaseButton}">
+            <Setter Property="Background" Value="{StaticResource BrandGradient}" />
+            <Setter Property="Foreground" Value="#001114" />
+            <Setter Property="BorderBrush" Value="Transparent" />
+            <Setter Property="FontWeight" Value="Bold" />
+            <Setter Property="MinWidth" Value="190" />
+        </Style>
+
+        <Style x:Key="NavButton" TargetType="Button" BasedOn="{StaticResource BaseButton}">
+            <Setter Property="MinHeight" Value="40" />
+            <Setter Property="Padding" Value="14,8" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderBrush" Value="Transparent" />
+            <Setter Property="Foreground" Value="{StaticResource MutedBrush}" />
+        </Style>
+    </Application.Resources>
+</Application>

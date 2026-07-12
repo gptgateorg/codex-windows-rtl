@@ -1,0 +1,164 @@
+using System.Diagnostics;
+using System.Reflection;
+using System.Windows;
+using System.Windows.Media;
+using CodexRtlManager.Models;
+using CodexRtlManager.Services;
+
+namespace CodexRtlManager;
+
+public partial class MainWindow : Window
+{
+    private const string WebsiteUrl = "https://gptgate.ai/";
+    private const string TelegramUrl = "https://t.me/GptGateAI";
+
+    private readonly CodexManagerService _manager = new();
+    private readonly UpdateService _updates = new();
+    private bool _busy;
+    private ManagerSnapshot? _snapshot;
+
+    public MainWindow()
+    {
+        InitializeComponent();
+        Loaded += async (_, _) => await RefreshAsync();
+    }
+
+    private async Task RefreshAsync()
+    {
+        SetBusy(true, "در حال بررسی نسخه دسکتاپ ChatGPT…");
+        var snapshot = await _manager.GetSnapshotAsync();
+        Render(snapshot);
+        SetBusy(false);
+        ProgressText.Text = snapshot.CanLaunch
+            ? "آماده اجرا با تزریق RTL در حافظه؛ هیچ فایل نصبی تغییر نمی‌کند."
+            : "پس از نصب ChatGPT Desktop دوباره بررسی کنید.";
+    }
+
+    private void Render(ManagerSnapshot snapshot)
+    {
+        _snapshot = snapshot;
+        StatusTitle.Text = snapshot.Title;
+        StatusDetails.Text = snapshot.Details;
+        CodexVersionText.Text = snapshot.Installation?.Version ?? "—";
+        InstallTypeText.Text = snapshot.Installation is null
+            ? "شناسایی نشد"
+            : snapshot.Installation.IsStorePackage ? "Microsoft Store" : "نصب معمولی";
+
+        StatusDot.Fill = new SolidColorBrush(snapshot.State switch
+        {
+            RuntimeState.Ready => Color.FromRgb(48, 209, 88),
+            RuntimeState.Error => Color.FromRgb(255, 69, 58),
+            _ => Color.FromRgb(114, 114, 114)
+        });
+
+        LaunchButton.IsEnabled = snapshot.CanLaunch && !_busy;
+        RestartButton.IsEnabled = snapshot.CanLaunch && !_busy;
+    }
+
+    private async void RefreshButton_Click(object sender, RoutedEventArgs e) => await RefreshAsync();
+
+    private async void LaunchButton_Click(object sender, RoutedEventArgs e)
+    {
+        await RunLaunchAsync(
+            () => _manager.LaunchAsync(useExistingProfile: false, new Progress<string>(SetProgress)),
+            "ChatGPT با پروفایل جدا و RTL اجرا شد.");
+    }
+
+    private async void RestartButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (_manager.IsChatGptRunning())
+        {
+            var answer = MessageBox.Show(
+                "پنجره‌های باز ChatGPT بسته می‌شوند و همان پروفایل با RTL دوباره اجرا می‌شود. ادامه می‌دهید؟",
+                "اجرای ChatGPT با RTL",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Warning,
+                MessageBoxResult.No,
+                MessageBoxOptions.RtlReading);
+            if (answer != MessageBoxResult.Yes)
+            {
+                return;
+            }
+        }
+
+        await RunLaunchAsync(
+            () => _manager.RestartCurrentChatGptWithRtlAsync(new Progress<string>(SetProgress)),
+            "ChatGPT با همان پروفایل و RTL اجرا شد.");
+    }
+
+    private async Task RunLaunchAsync(Func<Task> operation, string successMessage)
+    {
+        SetBusy(true, "در حال اجرای ChatGPT و فعال‌کردن RTL…");
+        try
+        {
+            await operation();
+            ProgressText.Text = successMessage;
+        }
+        catch (Exception exception)
+        {
+            ShowError(exception);
+        }
+        finally
+        {
+            SetBusy(false);
+        }
+    }
+
+    private async void UpdateButton_Click(object sender, RoutedEventArgs e)
+    {
+        SetBusy(true, "در حال بررسی بروزرسانی…");
+        try
+        {
+            var current = Assembly.GetExecutingAssembly().GetName().Version ?? new Version(0, 4, 0);
+            var result = await _updates.CheckAsync(current);
+            MessageBox.Show(result.Message, "بروزرسانی", MessageBoxButton.OK,
+                MessageBoxImage.Information, MessageBoxResult.OK, MessageBoxOptions.RtlReading);
+        }
+        catch (Exception exception)
+        {
+            ShowError(exception);
+        }
+        finally
+        {
+            SetBusy(false);
+        }
+    }
+
+    private void WebsiteButton_Click(object sender, RoutedEventArgs e) => OpenUrl(WebsiteUrl);
+
+    private void TelegramButton_Click(object sender, RoutedEventArgs e) => OpenUrl(TelegramUrl);
+
+    private static void OpenUrl(string url)
+    {
+        try
+        {
+            Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
+        }
+        catch (Exception exception)
+        {
+            ShowError(exception);
+        }
+    }
+
+    private void SetProgress(string message) => ProgressText.Text = message;
+
+    private void SetBusy(bool busy, string? message = null)
+    {
+        _busy = busy;
+        WorkProgress.Visibility = busy ? Visibility.Visible : Visibility.Collapsed;
+        if (message is not null)
+        {
+            ProgressText.Text = message;
+        }
+
+        LaunchButton.IsEnabled = !busy && _snapshot?.CanLaunch == true;
+        RestartButton.IsEnabled = !busy && _snapshot?.CanLaunch == true;
+        UpdateButton.IsEnabled = !busy;
+    }
+
+    private static void ShowError(Exception exception)
+    {
+        MessageBox.Show(exception.Message, "خطا", MessageBoxButton.OK,
+            MessageBoxImage.Error, MessageBoxResult.OK, MessageBoxOptions.RtlReading);
+    }
+}

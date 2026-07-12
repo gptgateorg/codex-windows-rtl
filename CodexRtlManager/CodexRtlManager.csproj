@@ -1,0 +1,34 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AssemblyName>GptGateRTL</AssemblyName>
+    <RootNamespace>CodexRtlManager</RootNamespace>
+    <Version>0.4.0</Version>
+    <AssemblyTitle>GptGate RTL</AssemblyTitle>
+    <Product>GptGate RTL</Product>
+    <Company>GptGate</Company>
+    <Description>Persian RTL companion for the official ChatGPT desktop app.</Description>
+    <Copyright>Copyright © GptGate contributors</Copyright>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <RepositoryUrl>https://github.com/Hamham83/gptgate-rtl</RepositoryUrl>
+    <ApplicationIcon>Resources\gptgate.ico</ApplicationIcon>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <PublishTrimmed>false</PublishTrimmed>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)' == 'Release'">
+    <DebugType>None</DebugType>
+    <DebugSymbols>false</DebugSymbols>
+  </PropertyGroup>
+  <ItemGroup>
+    <Resource Include="Resources\gptgate-logo.png" />
+    <Resource Include="Resources\Arad-Regular.ttf" />
+    <Resource Include="Resources\Arad-SemiBold.ttf" />
+    <Resource Include="Resources\Arad-Bold.ttf" />
+    <Resource Include="Resources\Arad-ExtraBold.ttf" />
+    <Resource Include="Resources\Arad-OFL.txt" />
+  </ItemGroup>
+</Project>

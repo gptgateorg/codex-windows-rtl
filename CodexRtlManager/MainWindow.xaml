@@ -1,0 +1,155 @@
+<Window x:Class="CodexRtlManager.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="GptGate RTL" Icon="Resources/gptgate-logo.png"
+        Height="660" Width="940" MinHeight="620" MinWidth="820"
+        WindowStartupLocation="CenterScreen" FlowDirection="LeftToRight"
+        Background="{StaticResource PageBrush}" Foreground="{StaticResource TextBrush}"
+        TextOptions.TextFormattingMode="Display" TextOptions.TextRenderingMode="ClearType">
+    <Grid Background="{StaticResource PageBrush}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="80" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <!-- Horizontal brand header, following the website chrome. -->
+        <Border Background="{StaticResource PageBrush}" BorderThickness="0">
+            <Grid Margin="30,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Button Style="{StaticResource NavButton}" Content="وب‌سایت" Click="WebsiteButton_Click" />
+                    <Button Style="{StaticResource NavButton}" Content="تلگرام" Click="TelegramButton_Click" Margin="4,0,0,0" />
+                </StackPanel>
+
+                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock FontFamily="{StaticResource AppFontExtraBold}" FontSize="17.3"
+                               FontWeight="ExtraBold" Margin="0,0,6,0" VerticalAlignment="Center"
+                               FlowDirection="RightToLeft">
+                        <Run Text="جی‌پی‌تی " Foreground="{StaticResource TextBrush}" />
+                        <Run Text="گیت" Foreground="{StaticResource PersianWordmarkGradient}" />
+                    </TextBlock>
+                    <Image Source="Resources/gptgate-logo.png" Width="36" Height="36" Stretch="Uniform" />
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <Grid Grid.Row="1" FlowDirection="RightToLeft" Margin="52,30,52,28">
+            <Grid.Background>
+                <RadialGradientBrush Center="0.5,0.1" GradientOrigin="0.5,0.1" RadiusX="0.68" RadiusY="0.75">
+                    <GradientStop Color="#1238DDF2" Offset="0" />
+                    <GradientStop Color="#00000000" Offset="1" />
+                </RadialGradientBrush>
+            </Grid.Background>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="24" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <!-- Brand-led hero copy, using the site's gold eyebrow and display scale. -->
+            <StackPanel HorizontalAlignment="Center" MaxWidth="760">
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                    <Rectangle Width="38" Height="2" Fill="{StaticResource GoldBrush}" Margin="0,9,12,0" />
+                    <TextBlock Text="فارسی، خوانا، بدون دست‌کاری" FontFamily="{StaticResource AppFont}"
+                               FontSize="11" FontWeight="Bold" Foreground="{StaticResource GoldBrush}" />
+                    <Rectangle Width="38" Height="2" Fill="{StaticResource GoldBrush}" Margin="12,9,0,0" />
+                </StackPanel>
+                <TextBlock FontFamily="{StaticResource AppFontExtraBold}" FontSize="34" FontWeight="ExtraBold"
+                           TextAlignment="Center" Margin="0,12,0,0" LineHeight="48">
+                    <Run Text="ChatGPT، این‌بار " Foreground="{StaticResource TextBrush}" />
+                    <Run Text="درست و فارسی" Foreground="{StaticResource GoldBrush}" />
+                </TextBlock>
+                <TextBlock Text="نسخه رسمی ChatGPT را اجرا کن. متن فارسی راست‌به‌چپ می‌شود و کدها همان‌طور می‌مانند."
+                           FontFamily="{StaticResource AppFont}" FontSize="13"
+                           Foreground="{StaticResource MutedBrush}" TextAlignment="Center" Margin="0,8,0,0" />
+            </StackPanel>
+
+            <!-- Soft surface card with the same radius and border language as the site. -->
+            <Border Grid.Row="2" MaxWidth="720" HorizontalAlignment="Stretch"
+                    Background="{StaticResource CardBrush}" BorderBrush="{StaticResource BorderBrush}"
+                    BorderThickness="1" CornerRadius="18" Padding="24,22">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+
+                        <Border Width="48" Height="48" CornerRadius="24" Background="{StaticResource AccentSoftBrush}"
+                                VerticalAlignment="Center">
+                            <Grid>
+                                <Ellipse x:Name="StatusDot" Width="10" Height="10" Fill="#727272"
+                                         HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            </Grid>
+                        </Border>
+
+                        <StackPanel Grid.Column="1" Margin="16,0" VerticalAlignment="Center">
+                            <TextBlock x:Name="StatusTitle" Text="در حال بررسی…" FontFamily="{StaticResource AppFont}"
+                                       FontSize="17" FontWeight="Bold" />
+                            <TextBlock x:Name="StatusDetails" Text="لطفاً کمی صبر کن." FontFamily="{StaticResource AppFont}"
+                                       FontSize="11" Foreground="{StaticResource MutedBrush}"
+                                       Margin="0,5,0,0" TextWrapping="Wrap" />
+                        </StackPanel>
+
+                        <Button Grid.Column="2" Style="{StaticResource BaseButton}" Content="بررسی دوباره"
+                                Click="RefreshButton_Click" Padding="16,8" MinHeight="40" VerticalAlignment="Center" />
+                    </Grid>
+
+                    <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="64,18,64,0">
+                        <Border Background="{StaticResource ElevatedBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"
+                                CornerRadius="9" Padding="12,6">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="نسخه" FontFamily="{StaticResource AppFont}" FontSize="10"
+                                           Foreground="{StaticResource SubtleBrush}" Margin="0,0,6,0" />
+                                <TextBlock x:Name="CodexVersionText" Text="—" FontFamily="Segoe UI" FontSize="10"
+                                           Foreground="{StaticResource TextBrush}" FlowDirection="LeftToRight" />
+                            </StackPanel>
+                        </Border>
+                        <Border Background="{StaticResource ElevatedBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"
+                                CornerRadius="9" Padding="12,6" Margin="8,0,0,0">
+                            <TextBlock x:Name="InstallTypeText" Text="—" FontFamily="{StaticResource AppFont}"
+                                       FontSize="10" Foreground="{StaticResource TextBrush}" />
+                        </Border>
+                    </StackPanel>
+
+                    <StackPanel Grid.Row="2" Margin="64,13,64,0">
+                        <ProgressBar x:Name="WorkProgress" Height="3" IsIndeterminate="True" Visibility="Collapsed"
+                                     Foreground="{StaticResource AccentBrush}" Background="{StaticResource ElevatedBrush}" />
+                        <TextBlock x:Name="ProgressText" FontFamily="{StaticResource AppFont}" Margin="0,7,0,0"
+                                   Foreground="{StaticResource SubtleBrush}" FontSize="10" TextWrapping="Wrap" />
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <Grid Grid.Row="4" MaxWidth="760" HorizontalAlignment="Stretch">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <Button x:Name="UpdateButton" Style="{StaticResource NavButton}" Content="بررسی بروزرسانی"
+                        Click="UpdateButton_Click" />
+                <StackPanel Grid.Column="2" Orientation="Horizontal">
+                    <Button x:Name="LaunchButton" Style="{StaticResource BaseButton}" Content="اجرای جداگانه"
+                            Click="LaunchButton_Click" Margin="0,0,10,0" />
+                    <Button x:Name="RestartButton" Style="{StaticResource PrimaryButton}" Content="اجرای ChatGPT با RTL"
+                            Click="RestartButton_Click" />
+                </StackPanel>
+            </Grid>
+        </Grid>
+    </Grid>
+</Window>
