@@ -11,7 +11,7 @@ public sealed record UpdateCheckResult(bool Configured, bool Available, string M
 
 public sealed class UpdateService
 {
-    private const string DefaultManifestUrl = "https://raw.githubusercontent.com/Hamham83/gptgate-rtl/main/update.json";
+    private const string DefaultManifestUrl = "https://raw.githubusercontent.com/gptgate/gptgate-rtl/main/update.json";
     private static readonly HttpClient Client = new() { Timeout = TimeSpan.FromSeconds(15) };
 
     public async Task<UpdateCheckResult> CheckAsync(Version currentVersion, CancellationToken cancellationToken = default)

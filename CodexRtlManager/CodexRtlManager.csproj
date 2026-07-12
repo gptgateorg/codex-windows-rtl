@@ -14,7 +14,7 @@
     <Description>Persian RTL companion for the official ChatGPT desktop app.</Description>
     <Copyright>Copyright © GptGate contributors</Copyright>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <RepositoryUrl>https://github.com/Hamham83/gptgate-rtl</RepositoryUrl>
+    <RepositoryUrl>https://github.com/gptgate/gptgate-rtl</RepositoryUrl>
     <ApplicationIcon>Resources\gptgate.ico</ApplicationIcon>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <PublishTrimmed>false</PublishTrimmed>

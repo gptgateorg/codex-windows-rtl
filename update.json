@@ -1,6 +1,6 @@
 {
   "Version": "0.4.0",
-  "DownloadUrl": "https://github.com/Hamham83/gptgate-rtl/releases/download/v0.4.0/GptGate-RTL-v0.4.0-standalone-win-x64.zip",
+  "DownloadUrl": "https://github.com/gptgate/gptgate-rtl/releases/download/v0.4.0/GptGate-RTL-v0.4.0-standalone-win-x64.zip",
   "Sha256": "08746476CFAA1EAE5D799C7EABD1ABA748A318DE843ECCC0B88097CD767F4D4E",
   "SupportedCodexVersions": []
 }

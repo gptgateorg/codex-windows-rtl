@@ -6,8 +6,8 @@ GptGate RTL launches the installed app with a local debugging port and injects a
 
 - Website: [gptgate.ai](https://gptgate.ai/)
 - Telegram: [@GptGateAI](https://t.me/GptGateAI)
-- Source: [github.com/Hamham83/gptgate-rtl](https://github.com/Hamham83/gptgate-rtl)
-- Releases: [Download for Windows](https://github.com/Hamham83/gptgate-rtl/releases)
+- Source: [github.com/gptgate/gptgate-rtl](https://github.com/gptgate/gptgate-rtl)
+- Releases: [Download for Windows](https://github.com/gptgate/gptgate-rtl/releases)
 - License: [MIT](LICENSE)
 
 ## Features
