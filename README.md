@@ -38,6 +38,7 @@
 - هیچ فایل سیستمی یا بسته نصب برنامه patch نمی‌شود.
 - رابط فارسی، دارک و هماهنگ با زبان طراحی GptGate است.
 - فونت آزاد Arad با وزن‌های درست داخل برنامه قرار دارد.
+- کاربر می‌تواند فونت دلخواه TTF یا OTF را انتخاب کند و هر زمان به Arad برگردد.
 
 ## نصب سریع
 
@@ -46,6 +47,10 @@
    - **Standalone** — پیشنهاد ما؛ بدون نیاز به نصب .NET.
    - **Light** — کم‌حجم‌تر؛ نیازمند [.NET 8 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/8.0).
 3. فایل `GptGateRTL.exe` را اجرا کنید و دکمه فعال‌سازی را بزنید.
+
+### انتخاب فونت
+
+فونت پیش‌فرض متن فارسی داخل ChatGPT، **Arad** است. از بخش «فونت متن فارسی» می‌توانید یک فایل معتبر `TTF` یا `OTF` تا حجم ۵ مگابایت انتخاب کنید. فونت در فضای محلی تنظیمات GptGate RTL ذخیره و در اجرای بعدی ChatGPT اعمال می‌شود. گزینه «بازگشت به Arad» تنظیم پیش‌فرض را برمی‌گرداند.
 
 ### نیازمندی‌ها
 
@@ -99,6 +104,7 @@ It launches the installed app with a local debugging port and injects a small ru
 - No installer or application-file patching
 - Framework-dependent lightweight and self-contained releases
 - Arad open-source Persian typeface under SIL OFL 1.1
+- Custom local TTF/OTF selection with Arad as the default
 
 ### Build
 

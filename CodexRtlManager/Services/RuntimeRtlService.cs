@@ -17,6 +17,10 @@ public sealed record RuntimeLaunchResult(Process Process, int DebugPort, int Inj
 public sealed class RuntimeRtlService
 {
     private static readonly HttpClient Client = new() { Timeout = TimeSpan.FromSeconds(3) };
+    private readonly FontSettingsService _fonts;
+
+    public RuntimeRtlService(FontSettingsService? fonts = null) =>
+        _fonts = fonts ?? new FontSettingsService();
 
     public async Task<RuntimeLaunchResult> LaunchAndInjectAsync(
         CodexInstallation installation,
@@ -50,13 +54,14 @@ public sealed class RuntimeRtlService
             var targets = await WaitForTargetsAsync(port, process, cancellationToken);
             progress?.Report("در حال فعال‌کردن RTL در رابط ChatGPT…");
             var injected = 0;
+            var script = RuntimeRtlPayload.CreateScript(_fonts.GetActiveFont());
             foreach (var target in targets.Where(target => target.Type is "page" or "webview"))
             {
                 if (string.IsNullOrWhiteSpace(target.WebSocketDebuggerUrl))
                 {
                     continue;
                 }
-                if (await InjectTargetAsync(target.WebSocketDebuggerUrl, cancellationToken))
+                if (await InjectTargetAsync(target.WebSocketDebuggerUrl, script, cancellationToken))
                 {
                     injected++;
                 }
@@ -118,7 +123,7 @@ public sealed class RuntimeRtlService
         throw new TimeoutException($"رابط تزریق ChatGPT در زمان مقرر آماده نشد. {lastError?.Message}");
     }
 
-    private static async Task<bool> InjectTargetAsync(string webSocketUrl, CancellationToken cancellationToken)
+    private static async Task<bool> InjectTargetAsync(string webSocketUrl, string script, CancellationToken cancellationToken)
     {
         using var socket = new ClientWebSocket();
         await socket.ConnectAsync(new Uri(webSocketUrl), cancellationToken);
@@ -128,7 +133,7 @@ public sealed class RuntimeRtlService
             method = "Runtime.evaluate",
             @params = new
             {
-                expression = RuntimeRtlPayload.Script,
+                expression = script,
                 awaitPromise = true,
                 returnByValue = true
             }

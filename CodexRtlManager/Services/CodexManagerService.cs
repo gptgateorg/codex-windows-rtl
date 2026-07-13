@@ -6,9 +6,20 @@ namespace CodexRtlManager.Services;
 public sealed class CodexManagerService
 {
     private readonly CodexLocator _locator = new();
-    private readonly RuntimeRtlService _runtimeRtl = new();
+    private readonly FontSettingsService _fonts = new();
+    private readonly RuntimeRtlService _runtimeRtl;
 
-    public CodexManagerService() => AppPaths.EnsureCreated();
+    public CodexManagerService()
+    {
+        AppPaths.EnsureCreated();
+        _runtimeRtl = new RuntimeRtlService(_fonts);
+    }
+
+    public string ActiveFontName => _fonts.ActiveFontName;
+
+    public string ImportFont(string path) => _fonts.Import(path);
+
+    public void ResetFont() => _fonts.ResetToArad();
 
     public async Task<ManagerSnapshot> GetSnapshotAsync(CancellationToken cancellationToken = default)
     {

@@ -1,7 +1,9 @@
 using CodexRtlManager.Services;
 using CodexRtlManager.Models;
+using CodexRtlManager.Dialogs;
 using System.Collections;
 using System.Resources;
+using System.Windows;
 
 if (args.Length == 2 && args[0] == "--runtime")
 {
@@ -29,15 +31,27 @@ if (args.Length == 2 && args[0] == "--runtime")
     return 0;
 }
 
+var payload = RuntimeRtlPayload.CreateScript(
+    new RuntimeFont("Test Font", "font/ttf", "truetype", "AAEAAA=="));
+
 var tests = new (string Name, Action Run)[]
 {
-    ("payload returns a successful CDP value", () => AssertContains(RuntimeRtlPayload.Script, "; true")),
-    ("payload detects Persian and Arabic text", () => AssertContains(RuntimeRtlPayload.Script, "\\u0590-\\u08FF")),
-    ("payload preserves code direction", () => AssertContains(RuntimeRtlPayload.Script, "pre, code, kbd, samp")),
-    ("payload ignores editable fields", () => AssertContains(RuntimeRtlPayload.Script, "[contenteditable=\"true\"]")),
-    ("payload watches streamed messages", () => AssertContains(RuntimeRtlPayload.Script, "MutationObserver")),
+    ("payload returns a successful CDP value", () => AssertContains(payload, "; true")),
+    ("payload detects Persian and Arabic text", () => AssertContains(payload, "\\u0590-\\u08FF")),
+    ("payload preserves code direction", () => AssertContains(payload, "pre, code, kbd, samp")),
+    ("payload ignores editable fields", () => AssertContains(payload, "[contenteditable=\"true\"]")),
+    ("payload watches streamed messages", () => AssertContains(payload, "MutationObserver")),
+    ("payload embeds the selected font", () =>
+    {
+        AssertContains(payload, "data:${fontMime};base64,${fontBase64}");
+        AssertContains(payload, "AAEAAA==");
+    }),
     ("legacy file patching is absent", AssertLegacyPatcherIsAbsent),
-    ("open-source Arad typography weights are embedded", AssertAradFontsAreEmbedded)
+    ("open-source Arad typography weights are embedded", AssertAradFontsAreEmbedded),
+    ("Arad is the default runtime font", AssertAradIsDefaultRuntimeFont),
+    ("custom TTF selection persists and resets", AssertCustomFontPersists),
+    ("restart dialog only proceeds after explicit confirmation", AssertRestartConfirmationDecision),
+    ("custom title bar toggles between normal and maximized", AssertWindowStateToggle)
 };
 
 var failed = 0;
@@ -99,5 +113,78 @@ static void AssertAradFontsAreEmbedded()
     if (!keys.Contains("resources/arad-ofl.txt"))
     {
         throw new InvalidOperationException("Arad OFL license is not embedded.");
+    }
+}
+
+static void AssertAradIsDefaultRuntimeFont()
+{
+    var directory = Path.Combine(Path.GetTempPath(), $"gptgate-font-test-{Guid.NewGuid():N}");
+    try
+    {
+        var font = new FontSettingsService(directory).GetActiveFont();
+        if (font.DisplayName != "Arad" || font.MimeType != "font/ttf" || font.Base64Data.Length == 0)
+        {
+            throw new InvalidOperationException("Arad was not loaded as the default runtime font.");
+        }
+    }
+    finally
+    {
+        if (Directory.Exists(directory))
+        {
+            Directory.Delete(directory, true);
+        }
+    }
+}
+
+static void AssertCustomFontPersists()
+{
+    var directory = Path.Combine(Path.GetTempPath(), $"gptgate-font-test-{Guid.NewGuid():N}");
+    Directory.CreateDirectory(directory);
+    var source = Path.Combine(directory, "My Persian Font.ttf");
+    File.WriteAllBytes(source, [0x00, 0x01, 0x00, 0x00, 0x47, 0x50, 0x54]);
+
+    try
+    {
+        var settingsDirectory = Path.Combine(directory, "settings");
+        var service = new FontSettingsService(settingsDirectory);
+        var name = service.Import(source);
+        var restored = new FontSettingsService(settingsDirectory).GetActiveFont();
+        if (name != "My Persian Font" || restored.DisplayName != name || restored.MimeType != "font/ttf")
+        {
+            throw new InvalidOperationException("The selected custom font was not restored.");
+        }
+
+        service.ResetToArad();
+        if (service.ActiveFontName != "Arad")
+        {
+            throw new InvalidOperationException("Reset did not restore Arad.");
+        }
+    }
+    finally
+    {
+        if (Directory.Exists(directory))
+        {
+            Directory.Delete(directory, true);
+        }
+    }
+}
+
+static void AssertRestartConfirmationDecision()
+{
+    if (!RestartConfirmationDecision.ShouldProceed(true)
+        || RestartConfirmationDecision.ShouldProceed(false)
+        || RestartConfirmationDecision.ShouldProceed(null))
+    {
+        throw new InvalidOperationException("Restart confirmation did not fail closed.");
+    }
+}
+
+static void AssertWindowStateToggle()
+{
+    if (WindowStatePolicy.Toggle(WindowState.Normal) != WindowState.Maximized
+        || WindowStatePolicy.Toggle(WindowState.Maximized) != WindowState.Normal
+        || WindowStatePolicy.Toggle(WindowState.Minimized) != WindowState.Maximized)
+    {
+        throw new InvalidOperationException("Window state toggle did not preserve native title-bar behavior.");
     }
 }

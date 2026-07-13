@@ -17,6 +17,7 @@
 - CodexRtlManager/Services/CodexLocator.cs: ChatGPT installation discovery
 - CodexRtlManager/Services/RuntimeRtlService.cs: local DevTools connection and runtime injection
 - CodexRtlManager/Services/RuntimeRtlPayload.cs: DOM observer and RTL/LTR behavior
+- CodexRtlManager/Services/FontSettingsService.cs: default Arad and persisted custom TTF/OTF selection
 - CodexRtlManager/Services/CodexManagerService.cs: application orchestration
 - CodexRtlManager.Tests/: executable test suite
 - .github/workflows/: CI and tagged release automation

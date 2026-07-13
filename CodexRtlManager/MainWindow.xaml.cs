@@ -1,9 +1,12 @@
 using System.Diagnostics;
 using System.Reflection;
 using System.Windows;
+using System.Windows.Input;
 using System.Windows.Media;
+using CodexRtlManager.Dialogs;
 using CodexRtlManager.Models;
 using CodexRtlManager.Services;
+using Microsoft.Win32;
 
 namespace CodexRtlManager;
 
@@ -20,6 +23,7 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        FontNameText.Text = _manager.ActiveFontName;
         Loaded += async (_, _) => await RefreshAsync();
     }
 
@@ -39,6 +43,9 @@ public partial class MainWindow : Window
         _snapshot = snapshot;
         StatusTitle.Text = snapshot.Title;
         StatusDetails.Text = snapshot.Details;
+        StatusDetails.Visibility = snapshot.State == RuntimeState.Ready
+            ? Visibility.Collapsed
+            : Visibility.Visible;
         CodexVersionText.Text = snapshot.Installation?.Version ?? "—";
         InstallTypeText.Text = snapshot.Installation is null
             ? "شناسایی نشد"
@@ -68,14 +75,7 @@ public partial class MainWindow : Window
     {
         if (_manager.IsChatGptRunning())
         {
-            var answer = MessageBox.Show(
-                "پنجره‌های باز ChatGPT بسته می‌شوند و همان پروفایل با RTL دوباره اجرا می‌شود. ادامه می‌دهید؟",
-                "اجرای ChatGPT با RTL",
-                MessageBoxButton.YesNo,
-                MessageBoxImage.Warning,
-                MessageBoxResult.No,
-                MessageBoxOptions.RtlReading);
-            if (answer != MessageBoxResult.Yes)
+            if (!BrandedDialog.ConfirmRestart(this))
             {
                 return;
             }
@@ -111,8 +111,7 @@ public partial class MainWindow : Window
         {
             var current = Assembly.GetExecutingAssembly().GetName().Version ?? new Version(0, 4, 0);
             var result = await _updates.CheckAsync(current);
-            MessageBox.Show(result.Message, "بروزرسانی", MessageBoxButton.OK,
-                MessageBoxImage.Information, MessageBoxResult.OK, MessageBoxOptions.RtlReading);
+            BrandedDialog.ShowInfo(this, "بروزرسانی", result.Message);
         }
         catch (Exception exception)
         {
@@ -124,9 +123,71 @@ public partial class MainWindow : Window
         }
     }
 
+    private void SelectFontButton_Click(object sender, RoutedEventArgs e)
+    {
+        var dialog = new OpenFileDialog
+        {
+            Title = "انتخاب فونت متن فارسی",
+            Filter = "Font files (*.ttf;*.otf)|*.ttf;*.otf",
+            CheckFileExists = true,
+            Multiselect = false
+        };
+
+        if (dialog.ShowDialog(this) != true)
+        {
+            return;
+        }
+
+        try
+        {
+            FontNameText.Text = _manager.ImportFont(dialog.FileName);
+            ProgressText.Text = "فونت ذخیره شد و در اجرای بعدی ChatGPT اعمال می‌شود.";
+        }
+        catch (Exception exception)
+        {
+            ShowError(exception);
+        }
+    }
+
+    private void ResetFontButton_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            _manager.ResetFont();
+            FontNameText.Text = _manager.ActiveFontName;
+            ProgressText.Text = "فونت پیش‌فرض Arad در اجرای بعدی ChatGPT اعمال می‌شود.";
+        }
+        catch (Exception exception)
+        {
+            ShowError(exception);
+        }
+    }
+
     private void WebsiteButton_Click(object sender, RoutedEventArgs e) => OpenUrl(WebsiteUrl);
 
     private void TelegramButton_Click(object sender, RoutedEventArgs e) => OpenUrl(TelegramUrl);
+
+    private void TitleBar_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        if (e.ClickCount == 2)
+        {
+            ToggleWindowState();
+            return;
+        }
+
+        DragMove();
+    }
+
+    private void MinimizeButton_Click(object sender, RoutedEventArgs e) => WindowState = WindowState.Minimized;
+
+    private void MaximizeButton_Click(object sender, RoutedEventArgs e) => ToggleWindowState();
+
+    private void CloseButton_Click(object sender, RoutedEventArgs e) => Close();
+
+    private void ToggleWindowState()
+    {
+        WindowState = WindowStatePolicy.Toggle(WindowState);
+    }
 
     private static void OpenUrl(string url)
     {
@@ -154,11 +215,12 @@ public partial class MainWindow : Window
         LaunchButton.IsEnabled = !busy && _snapshot?.CanLaunch == true;
         RestartButton.IsEnabled = !busy && _snapshot?.CanLaunch == true;
         UpdateButton.IsEnabled = !busy;
+        SelectFontButton.IsEnabled = !busy;
+        ResetFontButton.IsEnabled = !busy;
     }
 
     private static void ShowError(Exception exception)
     {
-        MessageBox.Show(exception.Message, "خطا", MessageBoxButton.OK,
-            MessageBoxImage.Error, MessageBoxResult.OK, MessageBoxOptions.RtlReading);
+        BrandedDialog.ShowError(Application.Current?.MainWindow, exception.Message);
     }
 }
