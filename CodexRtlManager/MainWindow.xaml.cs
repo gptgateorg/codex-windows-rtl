@@ -33,8 +33,10 @@ public partial class MainWindow : Window
         var snapshot = await _manager.GetSnapshotAsync();
         Render(snapshot);
         SetBusy(false);
-        ProgressText.Text = snapshot.CanLaunch
-            ? "آماده اجرا با تزریق RTL در حافظه؛ هیچ فایل نصبی تغییر نمی‌کند."
+        ProgressText.Text = _manager.IsPersistentRtlEnabled
+            ? "RTL دائمی فعال است؛ ChatGPT پس از هر بار اجرا خودکار راست‌چین می‌شود."
+            : snapshot.CanLaunch
+            ? "برای حذف اجرای دستی، RTL دائمی را یک‌بار فعال کنید."
             : "پس از نصب ChatGPT Desktop دوباره بررسی کنید.";
     }
 
@@ -58,17 +60,45 @@ public partial class MainWindow : Window
             _ => Color.FromRgb(114, 114, 114)
         });
 
-        LaunchButton.IsEnabled = snapshot.CanLaunch && !_busy;
+        PersistentButton.Content = _manager.IsPersistentRtlEnabled
+            ? "غیرفعال‌سازی RTL دائمی"
+            : "فعال‌سازی RTL دائمی";
+        PersistentButton.IsEnabled = !_busy;
         RestartButton.IsEnabled = snapshot.CanLaunch && !_busy;
     }
 
     private async void RefreshButton_Click(object sender, RoutedEventArgs e) => await RefreshAsync();
 
-    private async void LaunchButton_Click(object sender, RoutedEventArgs e)
+    private void PersistentButton_Click(object sender, RoutedEventArgs e)
     {
-        await RunLaunchAsync(
-            () => _manager.LaunchAsync(useExistingProfile: false, new Progress<string>(SetProgress)),
-            "ChatGPT با پروفایل جدا و RTL اجرا شد.");
+        SetBusy(true);
+        try
+        {
+            if (_manager.IsPersistentRtlEnabled)
+            {
+                _manager.DisablePersistentRtl();
+                PersistentButton.Content = "فعال‌سازی RTL دائمی";
+                ProgressText.Text = "RTL دائمی غیرفعال شد؛ اجرای فعلی تا زمان بسته‌شدن راست‌چین می‌ماند.";
+                return;
+            }
+
+            if (_manager.IsChatGptRunning() && !BrandedDialog.ConfirmRestart(this))
+            {
+                return;
+            }
+
+            _manager.EnablePersistentRtl();
+            PersistentButton.Content = "غیرفعال‌سازی RTL دائمی";
+            ProgressText.Text = "RTL دائمی فعال شد و از این پس همراه ویندوز اجرا می‌شود.";
+        }
+        catch (Exception exception)
+        {
+            ShowError(exception);
+        }
+        finally
+        {
+            SetBusy(false);
+        }
     }
 
     private async void RestartButton_Click(object sender, RoutedEventArgs e)
@@ -212,7 +242,7 @@ public partial class MainWindow : Window
             ProgressText.Text = message;
         }
 
-        LaunchButton.IsEnabled = !busy && _snapshot?.CanLaunch == true;
+        PersistentButton.IsEnabled = !busy;
         RestartButton.IsEnabled = !busy && _snapshot?.CanLaunch == true;
         UpdateButton.IsEnabled = !busy;
         SelectFontButton.IsEnabled = !busy;

@@ -183,9 +183,10 @@
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
 
-                <Button x:Name="LaunchButton" Grid.Column="0" Style="{StaticResource BaseButton}"
-                        Content="اجرای جداگانه" Click="LaunchButton_Click"
-                        MinWidth="190" VerticalAlignment="Center" />
+                <Button x:Name="PersistentButton" Grid.Column="0" Style="{StaticResource BaseButton}"
+                        Content="فعال‌سازی RTL دائمی" Click="PersistentButton_Click"
+                        AutomationProperties.Name="فعال‌سازی یا غیرفعال‌سازی RTL دائمی"
+                        MinWidth="220" VerticalAlignment="Center" />
                 <Button x:Name="RestartButton" Grid.Column="2" Style="{StaticResource PrimaryButton}"
                         Content="اجرای ChatGPT با RTL" Click="RestartButton_Click"
                         MinWidth="240" VerticalAlignment="Center" />

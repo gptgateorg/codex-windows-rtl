@@ -4,6 +4,18 @@ All notable changes are documented here.
 
 ## [Unreleased]
 
+### Added
+
+- One-time persistent RTL mode that starts a lightweight monitor for the current Windows user
+- Automatic reinjection for new or reloaded ChatGPT renderer documents
+- Reversible enable and disable controls in the main window
+
+### Fixed
+
+- Microsoft Store builds now launch through their App User Model ID instead of the protected `WindowsApps` executable path
+- Mixed English-prefix Persian text now stays right-to-left; direction is based on Persian or Arabic letters anywhere in the paragraph instead of its first word
+- RTL observation uses idle-time batching and also rechecks streamed text updates
+
 ## [0.4.0] - 2026-07-12
 
 ### Added

@@ -37,10 +37,37 @@ var payload = RuntimeRtlPayload.CreateScript(
 var tests = new (string Name, Action Run)[]
 {
     ("payload returns a successful CDP value", () => AssertContains(payload, "; true")),
-    ("payload detects Persian and Arabic text", () => AssertContains(payload, "\\u0590-\\u08FF")),
+    ("mixed English-prefix Persian text stays RTL", () =>
+    {
+        if (!RuntimeRtlPayload.ShouldUseRtl("ChatGPT برای نوشتن متن فارسی مناسب است."))
+        {
+            throw new InvalidOperationException("English-prefixed Persian text was not classified as RTL.");
+        }
+        if (RuntimeRtlPayload.ShouldUseRtl("ChatGPT API documentation")
+            || RuntimeRtlPayload.ShouldUseRtl("۱۲۳ English"))
+        {
+            throw new InvalidOperationException("Text without Persian or Arabic letters was classified as RTL.");
+        }
+        AssertContains(payload, "rtlLetter.test(node.textContent || '')");
+        AssertContains(payload, "[data-gptgate-rtl=\"true\"]");
+        AssertContains(payload, "const version = 4;");
+        AssertNotContains(payload, "unicode-bidi: plaintext");
+        AssertNotContains(payload, "node.dir = 'auto'");
+        AssertNotContains(payload, ":dir(rtl)");
+    }),
     ("payload preserves code direction", () => AssertContains(payload, "pre, code, kbd, samp")),
     ("payload ignores editable fields", () => AssertContains(payload, "[contenteditable=\"true\"]")),
-    ("payload watches streamed messages", () => AssertContains(payload, "MutationObserver")),
+    ("payload watches streamed message text", () =>
+    {
+        AssertContains(payload, "MutationObserver");
+        AssertContains(payload, "characterData: true");
+        AssertContains(payload, "enqueueCandidate(record.target)");
+    }),
+    ("payload batches added nodes during browser idle time", () =>
+    {
+        AssertContains(payload, "requestIdleCallback");
+        AssertContains(payload, "pendingRoots");
+    }),
     ("payload embeds the selected font", () =>
     {
         AssertContains(payload, "data:${fontMime};base64,${fontBase64}");
@@ -50,6 +77,10 @@ var tests = new (string Name, Action Run)[]
     ("open-source Arad typography weights are embedded", AssertAradFontsAreEmbedded),
     ("Arad is the default runtime font", AssertAradIsDefaultRuntimeFont),
     ("custom TTF selection persists and resets", AssertCustomFontPersists),
+    ("persistent RTL startup command is quoted and reversible", AssertPersistentStartupCommand),
+    ("runtime session state persists and clears", AssertRuntimeSessionStore),
+    ("existing-profile launch keeps only the debugging flag", AssertExistingProfileArguments),
+    ("new documents wait for the DOM before RTL injection", AssertDocumentStartupInjection),
     ("restart dialog only proceeds after explicit confirmation", AssertRestartConfirmationDecision),
     ("custom title bar toggles between normal and maximized", AssertWindowStateToggle)
 };
@@ -77,6 +108,14 @@ static void AssertContains(string value, string expected)
     if (!value.Contains(expected, StringComparison.Ordinal))
     {
         throw new InvalidOperationException($"Expected payload to contain: {expected}");
+    }
+}
+
+static void AssertNotContains(string value, string unexpected)
+{
+    if (value.Contains(unexpected, StringComparison.Ordinal))
+    {
+        throw new InvalidOperationException($"Expected payload not to contain: {unexpected}");
     }
 }
 
@@ -167,6 +206,64 @@ static void AssertCustomFontPersists()
             Directory.Delete(directory, true);
         }
     }
+}
+
+static void AssertPersistentStartupCommand()
+{
+    const string executable = @"C:\Program Files\GptGate RTL\GptGateRTL.exe";
+    var command = AutoRtlRegistrationService.BuildRunCommand(executable);
+    var expected = $"\"{executable}\" {AutoRtlRegistrationService.BackgroundArgument}";
+    if (!string.Equals(command, expected, StringComparison.Ordinal))
+    {
+        throw new InvalidOperationException("Persistent startup command is not safely quoted.");
+    }
+}
+
+static void AssertRuntimeSessionStore()
+{
+    var directory = Path.Combine(Path.GetTempPath(), $"gptgate-session-test-{Guid.NewGuid():N}");
+    var path = Path.Combine(directory, "runtime-session.json");
+    try
+    {
+        var store = new RuntimeSessionStore(path);
+        var expected = new RuntimeSession(1234, 5678, DateTimeOffset.UtcNow);
+        store.Write(expected);
+        var actual = store.Read();
+        if (actual is null || actual.ProcessId != expected.ProcessId || actual.DebugPort != expected.DebugPort)
+        {
+            throw new InvalidOperationException("Runtime session was not restored.");
+        }
+
+        store.Clear();
+        if (store.Read() is not null)
+        {
+            throw new InvalidOperationException("Runtime session was not cleared.");
+        }
+    }
+    finally
+    {
+        if (Directory.Exists(directory))
+        {
+            Directory.Delete(directory, true);
+        }
+    }
+}
+
+static void AssertExistingProfileArguments()
+{
+    var arguments = RuntimeRtlService.BuildLaunchArguments(45123, true);
+    if (!string.Equals(arguments, "--remote-debugging-port=45123", StringComparison.Ordinal))
+    {
+        throw new InvalidOperationException("Existing profile launch arguments changed unexpectedly.");
+    }
+}
+
+static void AssertDocumentStartupInjection()
+{
+    var startupScript = RuntimeRtlService.BuildDocumentStartupScript("window.__rtlTest = true");
+    AssertContains(startupScript, "DOMContentLoaded");
+    AssertContains(startupScript, "{ once: true }");
+    AssertContains(startupScript, "window.__rtlTest = true");
 }
 
 static void AssertRestartConfirmationDecision()

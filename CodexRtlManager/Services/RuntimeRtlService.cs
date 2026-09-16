@@ -18,9 +18,14 @@ public sealed class RuntimeRtlService
 {
     private static readonly HttpClient Client = new() { Timeout = TimeSpan.FromSeconds(3) };
     private readonly FontSettingsService _fonts;
+    private readonly RuntimeSessionStore _sessions;
+    private readonly HashSet<string> _registeredTargets = new(StringComparer.Ordinal);
 
-    public RuntimeRtlService(FontSettingsService? fonts = null) =>
+    public RuntimeRtlService(FontSettingsService? fonts = null, RuntimeSessionStore? sessions = null)
+    {
         _fonts = fonts ?? new FontSettingsService();
+        _sessions = sessions ?? new RuntimeSessionStore();
+    }
 
     public async Task<RuntimeLaunchResult> LaunchAndInjectAsync(
         CodexInstallation installation,
@@ -33,39 +38,17 @@ public sealed class RuntimeRtlService
             Directory.CreateDirectory(AppPaths.RuntimeUserDataDirectory);
         }
         var port = ReservePort();
-        var startInfo = new ProcessStartInfo
-        {
-            FileName = installation.ExecutablePath,
-            WorkingDirectory = installation.RootDirectory,
-            UseShellExecute = true
-        };
-        if (!useExistingProfile)
-        {
-            startInfo.ArgumentList.Add($"--user-data-dir={AppPaths.RuntimeUserDataDirectory}");
-        }
-        startInfo.ArgumentList.Add($"--remote-debugging-port={port}");
+        var arguments = BuildLaunchArguments(port, useExistingProfile);
 
         progress?.Report("در حال اجرای نسخه رسمی ChatGPT…");
-        var process = Process.Start(startInfo)
-            ?? throw new InvalidOperationException("ChatGPT اجرا نشد.");
+        var process = StartProcess(installation, arguments);
+        _sessions.Write(new RuntimeSession(process.Id, port, DateTimeOffset.Now));
 
         try
         {
-            var targets = await WaitForTargetsAsync(port, process, cancellationToken);
+            await WaitForTargetsAsync(port, process, cancellationToken);
             progress?.Report("در حال فعال‌کردن RTL در رابط ChatGPT…");
-            var injected = 0;
-            var script = RuntimeRtlPayload.CreateScript(_fonts.GetActiveFont());
-            foreach (var target in targets.Where(target => target.Type is "page" or "webview"))
-            {
-                if (string.IsNullOrWhiteSpace(target.WebSocketDebuggerUrl))
-                {
-                    continue;
-                }
-                if (await InjectTargetAsync(target.WebSocketDebuggerUrl, script, cancellationToken))
-                {
-                    injected++;
-                }
-            }
+            var injected = await EnsureInjectedAsync(port, cancellationToken);
 
             if (injected == 0)
             {
@@ -77,12 +60,85 @@ public sealed class RuntimeRtlService
         }
         catch
         {
+            _sessions.Clear();
             if (!process.HasExited)
             {
                 process.Kill(true);
             }
             throw;
         }
+    }
+
+    public async Task<int> EnsureInjectedAsync(int port, CancellationToken cancellationToken = default)
+    {
+        var targets = await Client.GetFromJsonAsync<CdpTarget[]>(
+            $"http://127.0.0.1:{port}/json/list",
+            cancellationToken) ?? [];
+        var script = RuntimeRtlPayload.CreateScript(_fonts.GetActiveFont());
+        var injected = 0;
+
+        foreach (var target in targets.Where(target => target.Type is "page" or "webview"))
+        {
+            if (string.IsNullOrWhiteSpace(target.WebSocketDebuggerUrl))
+            {
+                continue;
+            }
+
+            var registerForNewDocuments = _registeredTargets.Add(target.Id);
+            try
+            {
+                if (await InjectTargetAsync(
+                    target.WebSocketDebuggerUrl,
+                    script,
+                    registerForNewDocuments,
+                    cancellationToken))
+                {
+                    injected++;
+                }
+            }
+            catch
+            {
+                if (registerForNewDocuments)
+                {
+                    _registeredTargets.Remove(target.Id);
+                }
+                throw;
+            }
+        }
+
+        return injected;
+    }
+
+    public static string BuildLaunchArguments(int port, bool useExistingProfile)
+    {
+        var arguments = new List<string>();
+        if (!useExistingProfile)
+        {
+            arguments.Add($"--user-data-dir=\"{AppPaths.RuntimeUserDataDirectory}\"");
+        }
+        arguments.Add($"--remote-debugging-port={port}");
+        return string.Join(' ', arguments);
+    }
+
+    private static Process StartProcess(CodexInstallation installation, string arguments)
+    {
+        if (installation.IsStorePackage)
+        {
+            if (string.IsNullOrWhiteSpace(installation.AppUserModelId))
+            {
+                throw new InvalidOperationException("شناسه اجرای نسخه Microsoft Store پیدا نشد.");
+            }
+
+            return StoreApplicationActivator.Activate(installation.AppUserModelId, arguments);
+        }
+
+        return Process.Start(new ProcessStartInfo
+        {
+            FileName = installation.ExecutablePath,
+            WorkingDirectory = installation.RootDirectory,
+            Arguments = arguments,
+            UseShellExecute = false
+        }) ?? throw new InvalidOperationException("ChatGPT اجرا نشد.");
     }
 
     private static int ReservePort()
@@ -94,7 +150,7 @@ public sealed class RuntimeRtlService
         return port;
     }
 
-    private static async Task<CdpTarget[]> WaitForTargetsAsync(int port, Process process, CancellationToken cancellationToken)
+    private static async Task WaitForTargetsAsync(int port, Process process, CancellationToken cancellationToken)
     {
         Exception? lastError = null;
         for (var attempt = 0; attempt < 40; attempt++)
@@ -110,7 +166,7 @@ public sealed class RuntimeRtlService
                 var targets = await Client.GetFromJsonAsync<CdpTarget[]>($"http://127.0.0.1:{port}/json/list", cancellationToken);
                 if (targets is { Length: > 0 })
                 {
-                    return targets;
+                    return;
                 }
             }
             catch (Exception exception) when (exception is HttpRequestException or TaskCanceledException)
@@ -123,41 +179,82 @@ public sealed class RuntimeRtlService
         throw new TimeoutException($"رابط تزریق ChatGPT در زمان مقرر آماده نشد. {lastError?.Message}");
     }
 
-    private static async Task<bool> InjectTargetAsync(string webSocketUrl, string script, CancellationToken cancellationToken)
+    private static async Task<bool> InjectTargetAsync(
+        string webSocketUrl,
+        string script,
+        bool registerForNewDocuments,
+        CancellationToken cancellationToken)
     {
-        using var socket = new ClientWebSocket();
-        await socket.ConnectAsync(new Uri(webSocketUrl), cancellationToken);
-        var request = JsonSerializer.SerializeToUtf8Bytes(new
+        if (registerForNewDocuments)
         {
-            id = 1,
-            method = "Runtime.evaluate",
-            @params = new
+            var registration = await SendCommandAsync(
+                webSocketUrl,
+                1,
+                "Page.addScriptToEvaluateOnNewDocument",
+                new { source = BuildDocumentStartupScript(script) },
+                cancellationToken);
+            _ = registration;
+        }
+
+        var response = await SendCommandAsync(
+            webSocketUrl,
+            2,
+            "Runtime.evaluate",
+            new
             {
                 expression = script,
                 awaitPromise = true,
                 returnByValue = true
-            }
-        });
-        await socket.SendAsync(request, WebSocketMessageType.Text, true, cancellationToken);
+            },
+            cancellationToken);
 
-        var buffer = new byte[64 * 1024];
-        using var response = new MemoryStream();
-        WebSocketReceiveResult result;
-        do
-        {
-            result = await socket.ReceiveAsync(buffer, cancellationToken);
-            response.Write(buffer, 0, result.Count);
-        } while (!result.EndOfMessage);
-
-        using var json = JsonDocument.Parse(response.ToArray());
-        return !json.RootElement.TryGetProperty("error", out _)
-            && json.RootElement.TryGetProperty("result", out var commandResult)
+        return !response.TryGetProperty("error", out _)
+            && response.TryGetProperty("result", out var commandResult)
             && commandResult.TryGetProperty("result", out var evaluation)
             && evaluation.TryGetProperty("value", out var value)
             && value.ValueKind == JsonValueKind.True;
     }
 
+    public static string BuildDocumentStartupScript(string script) =>
+        "(() => { const apply = () => { " + script +
+        "; }; if (document.readyState === 'loading') { " +
+        "document.addEventListener('DOMContentLoaded', apply, { once: true }); " +
+        "} else { apply(); } })();";
+
+    private static async Task<JsonElement> SendCommandAsync(
+        string webSocketUrl,
+        int id,
+        string method,
+        object parameters,
+        CancellationToken cancellationToken)
+    {
+        using var socket = new ClientWebSocket();
+        await socket.ConnectAsync(new Uri(webSocketUrl), cancellationToken);
+        var request = JsonSerializer.SerializeToUtf8Bytes(new { id, method, @params = parameters });
+        await socket.SendAsync(request, WebSocketMessageType.Text, true, cancellationToken);
+
+        while (true)
+        {
+            var buffer = new byte[64 * 1024];
+            using var response = new MemoryStream();
+            WebSocketReceiveResult result;
+            do
+            {
+                result = await socket.ReceiveAsync(buffer, cancellationToken);
+                response.Write(buffer, 0, result.Count);
+            } while (!result.EndOfMessage);
+
+            using var json = JsonDocument.Parse(response.ToArray());
+            if (json.RootElement.TryGetProperty("id", out var responseId)
+                && responseId.GetInt32() == id)
+            {
+                return json.RootElement.Clone();
+            }
+        }
+    }
+
     private sealed record CdpTarget(
+        [property: JsonPropertyName("id")] string Id,
         [property: JsonPropertyName("type")] string Type,
         [property: JsonPropertyName("webSocketDebuggerUrl")] string? WebSocketDebuggerUrl);
 }

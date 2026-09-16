@@ -7,7 +7,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <AssemblyName>GptGateRTL</AssemblyName>
     <RootNamespace>CodexRtlManager</RootNamespace>
-    <Version>0.4.0</Version>
+    <Version>0.5.1</Version>
     <AssemblyTitle>GptGate RTL</AssemblyTitle>
     <Product>GptGate RTL</Product>
     <Company>GptGate</Company>

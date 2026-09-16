@@ -10,6 +10,8 @@ public static class AppPaths
 
     public static readonly string RuntimeUserDataDirectory = Path.Combine(DataDirectory, "RuntimeUserData");
     public static readonly string SettingsPath = Path.Combine(DataDirectory, "settings.json");
+    public static readonly string RuntimeSessionPath = Path.Combine(DataDirectory, "runtime-session.json");
+    public static readonly string BackgroundLogPath = Path.Combine(DataDirectory, "background.log");
 
     public static void EnsureCreated()
     {

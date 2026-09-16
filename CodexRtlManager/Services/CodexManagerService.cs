@@ -7,6 +7,7 @@ public sealed class CodexManagerService
 {
     private readonly CodexLocator _locator = new();
     private readonly FontSettingsService _fonts = new();
+    private readonly AutoRtlRegistrationService _autoRtl = new();
     private readonly RuntimeRtlService _runtimeRtl;
 
     public CodexManagerService()
@@ -16,6 +17,12 @@ public sealed class CodexManagerService
     }
 
     public string ActiveFontName => _fonts.ActiveFontName;
+
+    public bool IsPersistentRtlEnabled => _autoRtl.IsEnabled;
+
+    public void EnablePersistentRtl() => _autoRtl.Enable();
+
+    public void DisablePersistentRtl() => _autoRtl.Disable();
 
     public string ImportFont(string path) => _fonts.Import(path);
 
@@ -53,19 +60,20 @@ public sealed class CodexManagerService
         Process.GetProcessesByName("ChatGPT").Length > 0 ||
         Process.GetProcessesByName("Codex").Length > 0;
 
-    public async Task LaunchAsync(
+    public async Task<RuntimeLaunchResult> LaunchAsync(
         bool useExistingProfile = false,
         IProgress<string>? progress = null,
         CancellationToken cancellationToken = default)
     {
         var installation = await _locator.FindAsync(cancellationToken)
             ?? throw new InvalidOperationException("ChatGPT Desktop پیدا نشد.");
-        await _runtimeRtl.LaunchAndInjectAsync(installation, useExistingProfile, progress, cancellationToken);
+        return await _runtimeRtl.LaunchAndInjectAsync(installation, useExistingProfile, progress, cancellationToken);
     }
 
-    public async Task RestartCurrentChatGptWithRtlAsync(
+    public async Task<RuntimeLaunchResult> RestartCurrentChatGptWithRtlAsync(
         IProgress<string>? progress = null,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        int gracefulCloseAttempts = 20)
     {
         var installation = await _locator.FindAsync(cancellationToken)
             ?? throw new InvalidOperationException("ChatGPT Desktop پیدا نشد.");
@@ -76,7 +84,7 @@ public sealed class CodexManagerService
             process.CloseMainWindow();
         }
 
-        for (var attempt = 0; attempt < 20 && FindChatGptProcesses().Any(); attempt++)
+        for (var attempt = 0; attempt < gracefulCloseAttempts && FindChatGptProcesses().Any(); attempt++)
         {
             await Task.Delay(250, cancellationToken);
         }
@@ -94,8 +102,11 @@ public sealed class CodexManagerService
             }
         }
 
-        await _runtimeRtl.LaunchAndInjectAsync(installation, true, progress, cancellationToken);
+        return await _runtimeRtl.LaunchAndInjectAsync(installation, true, progress, cancellationToken);
     }
+
+    public Task<int> EnsureRtlAsync(int debugPort, CancellationToken cancellationToken = default) =>
+        _runtimeRtl.EnsureInjectedAsync(debugPort, cancellationToken);
 
     private static Process[] FindChatGptProcesses() =>
         Process.GetProcessesByName("ChatGPT")
